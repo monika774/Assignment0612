@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collaborative Editor</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 300px; font-size: 1rem; padding: 10px; }
+    button { margin-top: 10px; padding: 8px 16px; }
+    #suggestions { margin-top: 10px; background: #f8f8f8; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h2>Real-Time Collaborative Document Editor</h2>
+  <textarea id="editor" placeholder="Start typing..."></textarea>
+  <br>
+  <button onclick="getSuggestions()">Get AI Suggestions</button>
+  <div id="suggestions"></div>
+
+  <script>
+    let token = prompt("Enter your JWT token:");
+    const socket = new WebSocket("ws://localhost:8000/ws?token=" + token);
+    const editor = document.getElementById("editor");
+    const suggestionsBox = document.getElementById("suggestions");
+
+    socket.onmessage = (event) => {
+      editor.value = event.data;
+    };
+
+    editor.addEventListener("input", () => {
+      socket.send(editor.value);
+    });
+
+    async function getSuggestions() {
+      const response = await fetch("/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: editor.value })
+      });
+      const data = await response.json();
+      suggestionsBox.innerHTML = data.length
+        ? data.map(s => `<p><strong>${s.message}</strong> at offset ${s.offset}</p>`).join('')
+        : "No suggestions found.";
+    }
+  </script>
+</body>
+</html>
